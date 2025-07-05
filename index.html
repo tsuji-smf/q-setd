@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-set | 採用支援AIチャットボット</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Teal (based on #01a17f) -->
+    <!-- Application Structure Plan: アプリケーションは、企業ユーザー向けの管理ダッシュボードと、求職者向けのチャットUIデモの2つの主要なビューで構成されています。管理ダッシュボードは左側のサイドバーナビゲーションで「ダッシュボード」「会社情報」「設定」「会話データ」「分析レポート」の各機能画面を切り替えるSPA形式を採用。この構造は、企業ユーザーが必要な機能に迷わずアクセスでき、シームレスな操作体験を提供するために選択されました。各画面はカードベースのレイアウトで情報を整理し、視覚的な分かりやすさを重視しています。 -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: 各機能へのナビゲーション -> Goal: Navigate -> Viz/Presentation: サイドバーメニュー -> Interaction: クリックで右側のメインコンテンツが動的に切り替わる。
+        - Report Info: 会社情報 -> Goal: Inform/Configure -> Viz/Presentation: フォーム形式のカード -> Interaction: 各情報の確認・編集が可能（UI上）。
+        - Report Info: チャットボット設定 -> Goal: Configure -> Viz/Presentation: フォームとファイルアップロードUI -> Interaction: フォーム入力、トグルスイッチのON/OFF、ファイルのドラッグ＆ドロップが可能。初回メッセージや面談URLの設定も可能。
+        - Report Info: 会話データ -> Goal: Explore Data -> Viz/Presentation: フィルタリング機能付きのテーブル -> Interaction: 検索ボックスやドロップダウンで表示される会話ログを動的に絞り込める。
+        - Report Info: 分析レポート -> Goal: Analyze -> Viz/Presentation: Chart.jsによる棒グラフとドーナツグラフ、AIによるテキストサマリー -> Interaction: グラフのホバーで詳細ツールチップ表示。期間セレクターで表示データを変更できる。
+        - Report Info: 求職者チャット -> Goal: Demonstrate -> Viz/Presentation: 実際のチャットUI -> Interaction: 設定した初回メッセージ（面談ボタン含む）が表示され、自動応答がシミュレートされる。
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #f0fdfa; /* teal-50 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 250px; /* Reduced height */
+            max-height: 250px;
+        }
+        .sidebar-link.active {
+            background-color: #ccfbf1; /* teal-100 */
+            color: #0f766e; /* teal-700 */
+            font-weight: 600;
+        }
+        .sidebar-link:hover {
+            background-color: #f0fdfa; /* teal-50 */
+        }
+        .modal {
+            display: none;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .main-theme-color { color: #01a17f; }
+        .main-theme-bg { background-color: #01a17f; }
+        .main-theme-bg-hover:hover { background-color: #018a6b; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="flex h-screen bg-teal-50">
+        <aside class="w-64 bg-white border-r border-slate-200 flex-shrink-0 hidden md:flex flex-col">
+            <div class="h-16 flex items-center justify-center border-b border-slate-200 px-4">
+                <h1 class="text-2xl font-bold main-theme-color">キューセット</h1>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#" onclick="switchView('dashboard')" class="sidebar-link active flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                    <span class="mr-3 text-lg">📊</span> ダッシュボード
+                </a>
+                <a href="#" onclick="switchView('company')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                    <span class="mr-3 text-lg">🏢</span> 会社情報
+                </a>
+                <a href="#" onclick="switchView('settings')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                    <span class="mr-3 text-lg">⚙️</span> チャットボット設定
+                </a>
+                <a href="#" onclick="switchView('data')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                    <span class="mr-3 text-lg">💬</span> 会話データ
+                </a>
+                <a href="#" onclick="switchView('analysis')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                    <span class="mr-3 text-lg">📈</span> 分析レポート
+                </a>
+            </nav>
+            <div class="p-4 border-t border-slate-200">
+                 <button onclick="openChatDemo()" class="w-full main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    チャットデモを開く
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto">
+            <div id="view-dashboard" class="main-view p-6 md:p-8">
+                <div id="url-card" class="bg-white p-4 rounded-xl shadow-sm border mb-6 transition-all duration-300">
+                    <label class="text-sm font-semibold text-slate-500">チャットボットURL</label>
+                    <div class="flex items-center mt-2">
+                        <input id="chatbot-url" type="text" readonly value="https://your-company.q-set.ai/chat/1a2b3c4d" class="flex-grow bg-slate-100 p-2 border border-slate-200 rounded-l-lg text-slate-700 text-sm">
+                        <button onclick="copyUrlToClipboard()" id="copy-btn" class="main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-4 rounded-r-lg text-sm transition-colors">コピー</button>
+                    </div>
+                </div>
+                
+                <h2 class="text-2xl font-bold text-slate-900 mb-4">ダッシュボード</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow border">
+                        <h3 class="font-semibold text-slate-500 text-sm">今月の総質問数</h3>
+                        <p class="text-3xl font-bold mt-1">1,204</p>
+                        <p class="text-xs text-green-500 mt-1">+15% (前月比)</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow border">
+                        <h3 class="font-semibold text-slate-500 text-sm">最も多い質問トピック</h3>
+                        <p class="text-2xl font-bold mt-1">福利厚生</p>
+                        <p class="text-xs text-slate-500 mt-1">全体の32%</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow border">
+                        <h3 class="font-semibold text-slate-500 text-sm">新規トピック</h3>
+                        <p class="text-2xl font-bold mt-1">退職金制度</p>
+                        <p class="text-xs text-slate-500 mt-1">今月初登場</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow border">
+                        <h3 class="font-semibold text-slate-500 text-sm">AI回答解決率</h3>
+                        <p class="text-3xl font-bold mt-1">92.8<span class="text-xl">%</span></p>
+                        <p class="text-xs text-red-500 mt-1">-1.2% (前月比)</p>
+                    </div>
+                </div>
+                <div class="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div class="xl:col-span-2 bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-lg font-bold mb-4">過去30日間の質問数推移</h3>
+                        <div class="chart-container">
+                            <canvas id="dashboardTrendChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-lg font-bold mb-4">最近の質問</h3>
+                        <ul class="space-y-3">
+                            <li class="text-sm text-slate-600 border-b pb-2">副業は可能ですか？<span class="text-xs text-slate-400 block"> - 3時間前</span></li>
+                            <li class="text-sm text-slate-600 border-b pb-2">産休・育休の取得実績を教えてください。<span class="text-xs text-slate-400 block"> - 8時間前</span></li>
+                            <li class="text-sm text-slate-600 border-b pb-2">オフィスの場所はどこですか？<span class="text-xs text-slate-400 block"> - 1日前</span></li>
+                            <li class="text-sm text-slate-600">研修制度について詳しく知りたいです。<span class="text-xs text-slate-400 block"> - 1日前</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-company" class="main-view p-6 md:p-8 hidden">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">会社情報</h2>
+                <div class="bg-white p-8 rounded-xl shadow border max-w-4xl mx-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block font-semibold mb-1 text-sm">会社名</label>
+                            <input type="text" value="株式会社キューセット" class="w-full p-2 border border-slate-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1 text-sm">住所</label>
+                            <input type="text" value="東京都千代田区丸の内1-1-1" class="w-full p-2 border border-slate-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1 text-sm">電話番号</label>
+                            <input type="text" value="03-1234-5678" class="w-full p-2 border border-slate-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1 text-sm">担当部署</label>
+                            <input type="text" value="人事部 採用チーム" class="w-full p-2 border border-slate-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1 text-sm">担当者名</label>
+                            <input type="text" value="山田 太郎" class="w-full p-2 border border-slate-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1 text-sm">メールアドレス</label>
+                            <input type="email" value="yamada.taro@q-set.example.com" class="w-full p-2 border border-slate-300 rounded-lg">
+                        </div>
+                    </div>
+                    <div class="mt-8 text-right">
+                        <button class="main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-6 rounded-lg">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-settings" class="main-view p-6 md:p-8 hidden">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">チャットボット設定</h2>
+                <div class="max-w-4xl mx-auto space-y-8">
+                    <div class="bg-white p-6 rounded-xl shadow border space-y-6">
+                        <h3 class="text-lg font-bold">学習データ</h3>
+                        <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
+                            <p class="text-slate-500">ここにファイルをドラッグ＆ドロップ</p>
+                            <p class="my-2 text-sm text-slate-400">または</p>
+                            <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg text-sm">ファイルを選択</button>
+                        </div>
+                        <div class="text-xs text-center text-slate-500">
+                            <p>※手書き文字や画質の低いスキャンデータは、読み取り精度が低下する場合があります。</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-2 text-sm">アップロード済みデータ</h4>
+                            <ul class="space-y-2">
+                                <li class="flex items-center justify-between bg-slate-50 p-2 rounded-md text-sm">
+                                    <span>📄 採用情報.pdf</span>
+                                    <button class="text-red-500 hover:text-red-700 text-xs">削除</button>
+                                </li>
+                                <li class="flex items-center justify-between bg-slate-50 p-2 rounded-md text-sm">
+                                    <span>📄 就業規則_2025年度版.docx</span>
+                                    <button class="text-red-500 hover:text-red-700 text-xs">削除</button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow border space-y-6">
+                        <h3 class="text-lg font-bold">基本設定</h3>
+                        <div>
+                            <label class="block font-semibold mb-1 text-sm">回答の雰囲気（ペルソナ）</label>
+                            <select class="w-full p-2 border border-slate-300 rounded-lg">
+                                <option>丁寧で親切なアシスタント</option>
+                                <option>簡潔で分かりやすい説明者</option>
+                                <option>フレンドリーな先輩社員</option>
+                                <option>論理的でデータに基づいた専門家</option>
+                                <option>熱意があり、情熱的なエバンジェリスト</option>
+                                <option>ユーモアを交えた面白いキャラクター</option>
+                                <option>落ち着いていて信頼できる相談相手</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="recommended-questions" class="block font-semibold mb-1 text-sm">おすすめの質問（最大5つ、カンマ区切り）</label>
+                            <input id="recommended-questions" type="text" value="福利厚生について,平均残業時間は？,社内の雰囲気は？" class="w-full p-2 border border-slate-300 rounded-lg">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-semibold flex-shrink-0 pr-4 text-sm">不明な質問へのカスタム回答</label>
+                            <div id="custom-fallback-container">
+                                <textarea id="fallback-message" class="w-full p-2 border border-slate-300 rounded-lg text-sm" rows="3" placeholder="例：申し訳ありません、その質問にはお答えできません。採用担当者までお問い合わせください。">そのご質問については、現在学習中のため正確にお答えできません。お手数ですが、採用担当者まで直接お問い合わせいただけますでしょうか。</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow border space-y-6">
+                        <h3 class="text-lg font-bold">初回メッセージ設定</h3>
+                        <div>
+                             <label for="initial-message" class="block font-semibold mb-1 text-sm">初回メッセージ</label>
+                             <textarea id="initial-message" class="w-full p-2 border border-slate-300 rounded-lg text-sm" rows="4">こんにちは！採用に関するご質問があれば、何でも聞いてくださいね。</textarea>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label for="meeting-url-toggle" class="font-semibold flex-shrink-0 pr-4 text-sm">カジュアル面談ボタンの追加</label>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="meeting-url-toggle" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-[#01a17f] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                                </label>
+                            </div>
+                            <div id="meeting-url-container">
+                                <label class="block text-sm font-medium text-slate-600 mb-1">日程調整URL</label>
+                                <input id="meeting-url" type="text" value="https://calendly.com/your-company" class="w-full p-2 border border-slate-300 rounded-lg text-sm">
+                                <label class="block text-sm font-medium text-slate-600 mb-1 mt-2">ボタンの文言</label>
+                                <input id="meeting-btn-text" type="text" value="カジュアル面談を予約" class="w-full p-2 border border-slate-300 rounded-lg text-sm">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center pt-4">
+                        <button onclick="handleSettingsUpdate()" class="main-theme-bg main-theme-bg-hover text-white font-bold py-3 px-8 rounded-lg">
+                            設定を更新
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-data" class="main-view p-6 md:p-8 hidden">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">会話データ</h2>
+                <div class="bg-white p-6 rounded-xl shadow border">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <input type="text" placeholder="キーワードで検索..." class="w-full md:w-1/3 p-2 border border-slate-300 rounded-lg">
+                        <select class="p-2 border border-slate-300 rounded-lg">
+                            <option>すべてのトピック</option>
+                            <option>福利厚生</option>
+                            <option>給与・待遇</option>
+                            <option>業務内容</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b bg-slate-50">
+                                    <th class="p-3">日時</th>
+                                    <th class="p-3">質問内容</th>
+                                    <th class="p-3">トピック</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b">
+                                    <td class="p-3 text-sm text-slate-500">2025/07/06 10:32</td>
+                                    <td class="p-3">住宅手当はありますか？</td>
+                                    <td class="p-3"><span class="bg-violet-100 text-violet-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">福利厚生</span></td>
+                                </tr>
+                                <tr class="border-b">
+                                    <td class="p-3 text-sm text-slate-500">2025/07/06 09:15</td>
+                                    <td class="p-3">エンジニアの初任給はいくらですか？</td>
+                                    <td class="p-3"><span class="bg-blue-100 text-blue-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">給与・待遇</span></td>
+                                </tr>
+                                <tr class="border-b">
+                                    <td class="p-3 text-sm text-slate-500">2025/07/05 18:45</td>
+                                    <td class="p-3">リモートワークは可能ですか？</td>
+                                    <td class="p-3"><span class="bg-violet-100 text-violet-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">福利厚生</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-analysis" class="main-view p-6 md:p-8 hidden">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <h2 class="text-3xl font-bold text-slate-900">分析レポート</h2>
+                    <div class="flex items-center gap-2">
+                        <select class="p-2 border border-slate-300 rounded-lg bg-white">
+                            <option>2025年7月</option>
+                            <option>2025年6月</option>
+                            <option>2025年5月</option>
+                        </select>
+                        <button class="bg-white p-2 border border-slate-300 rounded-lg hover:bg-slate-50">期間指定</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-xl font-bold mb-4">質問トピックの内訳</h3>
+                        <div class="chart-container" style="height: 300px; max-height: 300px;">
+                            <canvas id="topicChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-xl font-bold mb-4">AIによる改善提案</h3>
+                        <div class="space-y-4">
+                            <div class="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                                <p class="font-bold text-teal-800">提案①：採用FAQページの拡充</p>
+                                <p class="text-sm text-slate-600 mt-1">「福利厚生」と「給与」に関する質問が全体の50%以上を占めています。これらの情報をまとめたFAQページを作成し、採用サイトからリンクを設置しましょう。</p>
+                            </div>
+                            <div class="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                                <p class="font-bold text-teal-800">提案②：選考プロセス案内の見直し</p>
+                                <p class="text-sm text-slate-600 mt-1">「選考プロセス」に関する質問が増加傾向にあります。面接回数や所要時間、オンライン面接の可否などを明記することで、候補者の不安を解消できます。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="chat-demo-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg h-[80vh] flex flex-col">
+            <header class="p-4 border-b flex justify-between items-center flex-shrink-0">
+                <h3 class="font-bold text-lg">キューセット</h3>
+                <button onclick="closeChatDemo()" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+            </header>
+            <div id="demo-meeting-container" class="p-3 border-b bg-slate-50 hidden">
+                <button id="demo-meeting-btn" class="w-full bg-amber-400 hover:bg-amber-500 text-amber-900 font-bold py-2 px-4 rounded-lg text-sm transition-colors"></button>
+            </div>
+            <div id="chat-messages" class="flex-1 p-6 overflow-y-auto space-y-4">
+            </div>
+            <footer class="p-4 border-t flex-shrink-0 bg-white">
+                <div id="demo-recommended-questions" class="flex flex-wrap gap-2 mb-3">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input id="chat-input" type="text" placeholder="質問を入力してください..." class="flex-1 p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                    <button id="chat-send" class="main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-4 rounded-lg">送信</button>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <div id="loading-overlay" class="modal fixed inset-0 bg-black bg-opacity-60 items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl text-center">
+            <p id="loading-text" class="text-lg font-semibold whitespace-pre-wrap"></p>
+        </div>
+    </div>
+
+    <script>
+        const views = document.querySelectorAll('.main-view');
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+        const chatDemoModal = document.getElementById('chat-demo-modal');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendButton = document.getElementById('chat-send');
+        let topicChartInstance = null;
+        let dashboardChartInstance = null;
+        const meetingUrlToggle = document.getElementById('meeting-url-toggle');
+        const meetingUrlContainer = document.getElementById('meeting-url-container');
+
+        function switchView(viewId) {
+            views.forEach(view => {
+                if (view.id === `view-${viewId}`) {
+                    view.classList.remove('hidden');
+                } else {
+                    view.classList.add('hidden');
+                }
+            });
+            sidebarLinks.forEach(link => {
+                if (link.getAttribute('onclick').includes(viewId)) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+
+            if (viewId === 'analysis') {
+                renderTopicChart();
+            } else if (viewId === 'dashboard') {
+                renderDashboardChart();
+            }
+        }
+
+        function renderTopicChart() {
+            if (topicChartInstance) topicChartInstance.destroy();
+            const ctx = document.getElementById('topicChart').getContext('2d');
+            topicChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['福利厚生', '給与・待遇', '業務内容', '社風・文化', '選考プロセス', 'その他'],
+                    datasets: [{
+                        data: [32, 21, 18, 15, 9, 5],
+                        backgroundColor: ['#8b5cf6', '#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#6b7280'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            });
+        }
+        
+        function renderDashboardChart() {
+            if (dashboardChartInstance) dashboardChartInstance.destroy();
+            const ctx = document.getElementById('dashboardTrendChart').getContext('2d');
+            const labels = Array.from({length: 30}, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - 29 + i);
+                return `${d.getMonth()+1}/${d.getDate()}`;
+            });
+            dashboardChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '質問数',
+                        data: Array.from({length: 30}, () => Math.floor(Math.random() * 50) + 20),
+                        fill: true,
+                        backgroundColor: 'rgba(1, 161, 127, 0.1)',
+                        borderColor: '#01a17f',
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } },
+                        x: { grid: { display: false }, ticks: { color: '#64748b', maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } }
+                    }
+                }
+            });
+        }
+
+        function openChatDemo() {
+            chatDemoModal.classList.add('active');
+            chatMessages.innerHTML = '';
+            
+            const meetingButtonContainer = document.getElementById('demo-meeting-container');
+            const meetingButton = document.getElementById('demo-meeting-btn');
+            const addMeetingButtonToggle = document.getElementById('meeting-url-toggle').checked;
+            if (addMeetingButtonToggle) {
+                meetingButton.textContent = document.getElementById('meeting-btn-text').value;
+                const url = document.getElementById('meeting-url').value;
+                meetingButton.onclick = () => window.open(url, '_blank');
+                meetingButtonContainer.classList.remove('hidden');
+            } else {
+                meetingButtonContainer.classList.add('hidden');
+            }
+
+            const initialMessageText = document.getElementById('initial-message').value;
+            addBotMessage(`<p>${initialMessageText.replace(/\n/g, '<br>')}</p>`, true);
+
+            const recommendedContainer = document.getElementById('demo-recommended-questions');
+            recommendedContainer.innerHTML = '';
+            const recommendedText = document.getElementById('recommended-questions').value;
+            const questions = recommendedText.split(',').map(q => q.trim()).filter(q => q);
+            if (questions.length > 0) {
+                questions.forEach(q => {
+                    const btn = document.createElement('button');
+                    btn.textContent = q;
+                    btn.className = 'bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1 rounded-full hover:bg-teal-200 transition-colors';
+                    btn.onclick = () => {
+                        chatInput.value = q;
+                        handleSendMessage();
+                    };
+                    recommendedContainer.appendChild(btn);
+                });
+                recommendedContainer.classList.remove('hidden');
+            } else {
+                recommendedContainer.classList.add('hidden');
+            }
+        }
+
+        function closeChatDemo() {
+            chatDemoModal.classList.remove('active');
+        }
+
+        function addMessage(content, sender, isHtml = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const messageBubble = document.createElement('div');
+            if (isHtml) {
+                messageBubble.innerHTML = content;
+            } else {
+                messageBubble.textContent = content;
+            }
+            messageBubble.className = `max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${sender === 'user' ? 'main-theme-bg text-white' : 'bg-slate-100 text-slate-800'}`;
+            
+            messageDiv.appendChild(messageBubble);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addBotMessage(content, isHtml = false) {
+            addMessage(content, 'bot', isHtml);
+        }
+        
+        function handleSendMessage() {
+            const recommendedContainer = document.getElementById('demo-recommended-questions');
+            if(recommendedContainer) {
+                recommendedContainer.innerHTML = '';
+                recommendedContainer.classList.add('hidden');
+            }
+
+            const userMessage = chatInput.value.trim();
+            if (userMessage) {
+                addMessage(userMessage, 'user');
+                chatInput.value = '';
+                
+                setTimeout(() => {
+                    let botResponseText = "ご質問ありがとうございます。";
+                    if (userMessage.includes("福利厚生")) {
+                        botResponseText += "当社の福利厚生には、住宅手当、資格取得支援、リモートワーク制度などがございます。詳細は採用資料のP.12をご確認ください。";
+                    } else if (userMessage.includes("給与") || userMessage.includes("年収")) {
+                        botResponseText += "給与については、ご経験やスキルに応じて決定されます。モデル年収については、採用サイトの募集要項に記載がございます。";
+                    } else {
+                        botResponseText = document.getElementById('fallback-message').value;
+                    }
+                    addBotMessage(botResponseText);
+                }, 1000);
+            }
+        }
+
+        function copyUrlToClipboard() {
+            const urlInput = document.getElementById('chatbot-url');
+            const copyBtn = document.getElementById('copy-btn');
+            
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = urlInput.value;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            copyBtn.textContent = 'コピー完了!';
+            setTimeout(() => {
+                copyBtn.textContent = 'コピー';
+            }, 2000);
+        }
+
+        function handleSettingsUpdate() {
+            const overlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+
+            loadingText.textContent = '設定を更新しています...\n資料の読み込みには数分かかる場合があります。';
+            overlay.classList.add('active');
+
+            setTimeout(() => {
+                loadingText.textContent = '更新が完了しました！';
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    const urlCard = document.getElementById('url-card');
+                    switchView('dashboard');
+                    urlCard.classList.add('ring-2', 'ring-offset-2', 'ring-teal-500');
+                    setTimeout(() => {
+                        urlCard.classList.remove('ring-2', 'ring-offset-2', 'ring-teal-500');
+                    }, 3000);
+                }, 1500);
+            }, 2500);
+        }
+
+        meetingUrlToggle.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                meetingUrlContainer.classList.remove('hidden');
+            } else {
+                meetingUrlContainer.classList.add('hidden');
+            }
+        });
+
+        chatSendButton.addEventListener('click', handleSendMessage);
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleSendMessage();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            switchView('dashboard');
+            if (meetingUrlToggle.checked) {
+                meetingUrlContainer.classList.remove('hidden');
+            } else {
+                meetingUrlContainer.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
