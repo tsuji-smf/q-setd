@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-set | 管理者インターフェイス</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Teal (based on #01a17f) -->
+    <!-- Application Structure Plan: このアプリケーションは、まずログイン画面で認証を行い、成功後にメインの管理ダッシュボードが表示される構造です。メイン画面はサイドバーナビゲーションを持つSPA形式で、「ダッシュボード」「顧客管理」「新規企業登録」「管理者設定」の各機能にアクセスできます。この構造は、機密情報へのアクセスを制限し、ログインした管理者が目的の操作を効率的に行えるように設計されています。各機能は明確に分離されており、特に顧客管理画面では、データの探索（フィルタリング）とエクスポート（CSVダウンロード）という具体的なタスクに最適化されたUIを提供します。 -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: ログイン認証 -> Goal: Secure -> Viz/Presentation: シンプルなログインフォーム -> Interaction: IDとパスワードを入力し、ログインボタンを押す。認証に失敗するとエラーメッセージが表示される。
+        - Report Info: 登録会社情報一覧 -> Goal: Explore Data -> Viz/Presentation: 月別フィルター付きの多機能テーブル -> Interaction: 月やキーワードで検索すると表示データが動的に更新される。CSVダウンロードボタンで表示中のデータをファイルとして保存できる。「詳細」ボタンで個別ページに遷移。
+        - Report Info: 新規企業登録 -> Goal: Configure/Manage -> Viz/Presentation: シンプルなフォーム -> Interaction: 企業情報を入力し登録すると、顧客一覧に追加され、登録案内のアラートが表示される。
+        - Report Info: 全体の利用状況 -> Goal: Analyze -> Viz/Presentation: Chart.jsによる時系列の棒グラフと、月間/累計を切り替えられるサマリーカード -> Interaction: グラフのホバーで各月の詳細な数値を確認できる。トグルスイッチで表示データを切り替え。
+        - Report Info: 管理者アカウント追加 -> Goal: Configure/Manage -> Viz/Presentation: 権限設定付きのフォーム -> Interaction: メールアドレス、パスワード、権限を入力して新しい管理者を追加する。
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        .main-theme-color { color: #01a17f; }
+        .main-theme-bg { background-color: #01a17f; }
+        .main-theme-bg-hover:hover { background-color: #018a6b; }
+        .main-theme-focus-ring:focus { --tw-ring-color: #01a17f; }
+        .sidebar-link.active {
+            background-color: #ccfbf1; /* teal-100 */
+            color: #0f766e; /* teal-700 */
+            font-weight: 600;
+        }
+        .sidebar-link:hover {
+            background-color: #f0fdfa; /* teal-50 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Login View -->
+    <div id="login-view" class="min-h-screen flex flex-col items-center justify-center bg-teal-50 px-4">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold main-theme-color">キューセット</h1>
+                <p class="text-slate-600 mt-2">管理者インターフェイス</p>
+            </div>
+            <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
+                <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">管理者ログイン</h2>
+                <div class="space-y-6">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-slate-700">ログインID</label>
+                        <div class="mt-1">
+                            <input id="email" name="email" type="email" required class="w-full p-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 main-theme-focus-ring focus:border-transparent" placeholder="your@email.com">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-slate-700">パスワード</label>
+                        <div class="mt-1">
+                            <input id="password" name="password" type="password" required class="w-full p-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 main-theme-focus-ring focus:border-transparent" placeholder="パスワード">
+                        </div>
+                    </div>
+                    <p id="login-error" class="text-red-500 text-sm text-center hidden">IDまたはパスワードが正しくありません。</p>
+                    <div>
+                        <button onclick="handleLogin()" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white main-theme-bg main-theme-bg-hover focus:outline-none focus:ring-2 focus:ring-offset-2 main-theme-focus-ring">
+                            ログイン
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App View -->
+    <div id="app-view" class="hidden">
+        <div class="flex h-screen bg-slate-100">
+            <aside class="w-64 bg-white border-r border-slate-200 flex-shrink-0 hidden md:flex flex-col">
+                <div class="h-16 flex items-center justify-center border-b border-slate-200 px-4">
+                    <h1 class="text-2xl font-bold main-theme-color">キューセット</h1>
+                </div>
+                <nav class="flex-1 p-4 space-y-2">
+                    <a href="#" onclick="switchView('dashboard')" class="sidebar-link active flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                        <span class="mr-3 text-lg">📊</span> ダッシュボード
+                    </a>
+                    <a href="#" onclick="switchView('clients')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                        <span class="mr-3 text-lg">🏢</span> 顧客管理
+                    </a>
+                    <a href="#" onclick="switchView('new-client')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                        <span class="mr-3 text-lg">🆕</span> 新規企業登録
+                    </a>
+                    <a href="#" onclick="switchView('admins')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                        <span class="mr-3 text-lg">🔑</span> 管理者設定
+                    </a>
+                </nav>
+                <div class="p-4 border-t border-slate-200">
+                    <button onclick="handleLogout()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-lg transition-colors">
+                        ログアウト
+                    </button>
+                </div>
+            </aside>
+
+            <main class="flex-1 overflow-y-auto">
+                <div id="view-dashboard" class="main-view p-6 md:p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-slate-900">ダッシュボード</h2>
+                        <div class="flex items-center space-x-2 bg-slate-200 p-1 rounded-lg">
+                            <button id="monthly-btn" onclick="toggleDashboardView('monthly')" class="px-3 py-1 text-sm font-semibold rounded-md bg-white text-teal-700 shadow">月間</button>
+                            <button id="cumulative-btn" onclick="toggleDashboardView('cumulative')" class="px-3 py-1 text-sm font-semibold rounded-md text-slate-600">累計</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow border">
+                            <h3 class="font-semibold text-slate-500">総契約社数</h3>
+                            <p id="total-clients" class="text-4xl font-bold mt-2"></p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow border">
+                            <h3 id="questions-title" class="font-semibold text-slate-500">総質問数 (今月)</h3>
+                            <p id="total-questions" class="text-4xl font-bold mt-2"></p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow border">
+                            <h3 id="apicalls-title" class="font-semibold text-slate-500">総APIリクエスト (今月)</h3>
+                            <p id="total-api-calls" class="text-4xl font-bold mt-2"></p>
+                        </div>
+                    </div>
+                    <div class="mt-8 bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-xl font-bold mb-4">月次質問数 全社合計</h3>
+                        <div class="chart-container">
+                            <canvas id="mainTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-clients" class="main-view p-6 md:p-8 hidden">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-6">顧客管理</h2>
+                    <div class="bg-white p-6 rounded-xl shadow border">
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                            <input id="client-search" onkeyup="renderClientTable()" type="text" placeholder="企業名またはIDで検索..." class="p-2 border border-slate-300 rounded-lg w-full md:w-auto">
+                            <div class="flex items-center gap-4">
+                                <div>
+                                    <label for="month-filter" class="text-sm font-medium">表示月:</label>
+                                    <select id="month-filter" onchange="renderClientTable()" class="ml-2 p-2 border border-slate-300 rounded-lg">
+                                        <option value="2025-07">2025年7月</option>
+                                        <option value="2025-06">2025年6月</option>
+                                        <option value="2025-05">2025年5月</option>
+                                    </select>
+                                </div>
+                                <button onclick="downloadCSV()" class="main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-4 rounded-lg text-sm">CSVダウンロード</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="border-b bg-slate-50">
+                                        <th class="p-3">企業ID</th>
+                                        <th class="p-3">会社名</th>
+                                        <th class="p-3">登録日</th>
+                                        <th class="p-3">質問数</th>
+                                        <th class="p-3">APIリクエスト数</th>
+                                        <th class="p-3">詳細</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="client-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-client-detail" class="main-view p-6 md:p-8 hidden">
+                    <button onclick="switchView('clients')" class="mb-6 text-teal-600 hover:underline">&larr; 顧客管理に戻る</button>
+                    <h2 id="detail-client-name" class="text-3xl font-bold text-slate-900 mb-6"></h2>
+                    <div class="bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-xl font-bold mb-4">利用状況サマリー</h3>
+                        <div id="detail-client-stats" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+                    </div>
+                </div>
+
+                <div id="view-new-client" class="main-view p-6 md:p-8 hidden">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-6">新規企業登録</h2>
+                    <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow border">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="new-client-name" class="block text-sm font-medium text-slate-700">企業名</label>
+                                <input id="new-client-name" type="text" class="mt-1 w-full p-2 border border-slate-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label for="new-client-contact" class="block text-sm font-medium text-slate-700">担当者名</label>
+                                <input id="new-client-contact" type="text" class="mt-1 w-full p-2 border border-slate-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label for="new-client-email" class="block text-sm font-medium text-slate-700">メールアドレス</label>
+                                <input id="new-client-email" type="email" class="mt-1 w-full p-2 border border-slate-300 rounded-lg">
+                            </div>
+                            <div class="text-right pt-4">
+                                <button onclick="handleNewClientRegistration()" class="main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-6 rounded-lg">登録する</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="view-admins" class="main-view p-6 md:p-8 hidden">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-6">管理者設定</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-xl shadow border">
+                             <h3 class="text-xl font-bold mb-4">管理者一覧</h3>
+                             <ul id="admin-list" class="space-y-3">
+                             </ul>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow border">
+                            <h3 class="text-xl font-bold mb-4">新規管理者追加</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="new-admin-email" class="block text-sm font-medium text-slate-700">メールアドレス</label>
+                                    <input id="new-admin-email" type="email" class="mt-1 w-full p-2 border border-slate-300 rounded-lg" placeholder="new.admin@example.com">
+                                </div>
+                                <div>
+                                    <label for="new-admin-password" class="block text-sm font-medium text-slate-700">初期パスワード</label>
+                                    <input id="new-admin-password" type="text" class="mt-1 w-full p-2 border border-slate-300 rounded-lg">
+                                </div>
+                                <div>
+                                    <label for="new-admin-role" class="block text-sm font-medium text-slate-700">権限</label>
+                                    <select id="new-admin-role" class="mt-1 w-full p-2 border border-slate-300 rounded-lg">
+                                        <option>プロダクト担当</option>
+                                        <option>管理者</option>
+                                        <option>マスター管理者</option>
+                                    </select>
+                                </div>
+                                <div class="text-right">
+                                    <button onclick="handleAddAdmin()" class="main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-6 rounded-lg">追加する</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const loginView = document.getElementById('login-view');
+        const appView = document.getElementById('app-view');
+        const loginError = document.getElementById('login-error');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const mainViews = document.querySelectorAll('.main-view');
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+        
+        let clientData = [
+            { name: '株式会社A', regDate: '2025-07-01', contactName: '田中', contactEmail: 'tanaka@a-corp.com', stats: { '2025-07': { questions: 1204, apiCalls: 15830 }, '2025-06': { questions: 980, apiCalls: 12500 }, '2025-05': { questions: 750, apiCalls: 9800 } } },
+            { name: 'Bコーポレーション', regDate: '2025-06-15', contactName: '鈴木', contactEmail: 'suzuki@b-corp.com', stats: { '2025-07': { questions: 850, apiCalls: 11200 }, '2025-06': { questions: 450, apiCalls: 6800 }, '2025-05': { questions: 0, apiCalls: 0 } } },
+            { name: '合同会社C', regDate: '2025-05-20', contactName: '佐藤', contactEmail: 'sato@c-corp.com', stats: { '2025-07': { questions: 2300, apiCalls: 28900 }, '2025-06': { questions: 1800, apiCalls: 24000 }, '2025-05': { questions: 500, apiCalls: 7200 } } },
+            { name: 'Dサービス', regDate: '2025-07-05', contactName: '高橋', contactEmail: 'takahashi@d-corp.com', stats: { '2025-07': { questions: 150, apiCalls: 2400 }, '2025-06': { questions: 0, apiCalls: 0 }, '2025-05': { questions: 0, apiCalls: 0 } } },
+        ];
+
+        const adminUsers = [
+            { email: 'tsuji@setmefree-hd.jp', role: 'マスター管理者' },
+            { email: 'sato@q-set.dev', role: '管理者' },
+            { email: 'tanaka@q-set.dev', role: 'プロダクト担当' },
+        ];
+
+        function generateClientIds() {
+            clientData = clientData.map((client, index) => {
+                client.id = `qset${(index + 1).toString().padStart(3, '0')}`;
+                return client;
+            });
+        }
+
+        function handleLogin() {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            if (email === 'tsuji@setmefree-hd.jp' && password === 'smf-hd2025') {
+                loginView.classList.add('hidden');
+                appView.classList.remove('hidden');
+                initApp();
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            emailInput.value = '';
+            passwordInput.value = '';
+            loginError.classList.add('hidden');
+            appView.classList.add('hidden');
+            loginView.classList.remove('hidden');
+        }
+
+        function switchView(viewId) {
+            mainViews.forEach(view => view.id === `view-${viewId}` ? view.classList.remove('hidden') : view.classList.add('hidden'));
+            sidebarLinks.forEach(link => link.getAttribute('onclick').includes(viewId) ? link.classList.add('active') : link.classList.remove('active'));
+        }
+
+        function renderClientTable() {
+            const selectedMonth = document.getElementById('month-filter').value;
+            const searchTerm = document.getElementById('client-search').value.toLowerCase();
+            const tableBody = document.getElementById('client-table-body');
+            tableBody.innerHTML = '';
+            
+            const filteredData = clientData.filter(client => 
+                client.name.toLowerCase().includes(searchTerm) || client.id.toLowerCase().includes(searchTerm)
+            );
+
+            filteredData.forEach(client => {
+                const stats = client.stats[selectedMonth] || { questions: 0, apiCalls: 0 };
+                const row = `
+                    <tr class="border-b">
+                        <td class="p-3 font-mono text-sm">${client.id}</td>
+                        <td class="p-3 font-medium">${client.name}</td>
+                        <td class="p-3 text-sm text-slate-500">${client.regDate}</td>
+                        <td class="p-3 text-sm">${stats.questions.toLocaleString()}</td>
+                        <td class="p-3 text-sm">${stats.apiCalls.toLocaleString()}</td>
+                        <td class="p-3"><button onclick="showClientDetail('${client.id}')" class="text-teal-600 hover:underline text-sm">詳細</button></td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        function showClientDetail(clientId) {
+            const client = clientData.find(c => c.id === clientId);
+            if (!client) return;
+
+            document.getElementById('detail-client-name').textContent = `${client.name} (${client.id})`;
+            const statsContainer = document.getElementById('detail-client-stats');
+            statsContainer.innerHTML = '';
+
+            Object.keys(client.stats).sort().reverse().forEach(month => {
+                const monthStats = client.stats[month];
+                const card = `
+                    <div class="bg-slate-50 p-4 rounded-lg border">
+                        <h4 class="font-bold">${month.replace('-', '年')}月</h4>
+                        <p class="text-sm mt-2">質問数: ${monthStats.questions.toLocaleString()}</p>
+                        <p class="text-sm">APIリクエスト数: ${monthStats.apiCalls.toLocaleString()}</p>
+                    </div>
+                `;
+                statsContainer.innerHTML += card;
+            });
+            switchView('client-detail');
+        }
+
+        function handleNewClientRegistration() {
+            const name = document.getElementById('new-client-name').value;
+            const contact = document.getElementById('new-client-contact').value;
+            const email = document.getElementById('new-client-email').value;
+
+            if (name && contact && email) {
+                const newId = `qset${(clientData.length + 1).toString().padStart(3, '0')}`;
+                const newClient = {
+                    id: newId,
+                    name: name,
+                    regDate: new Date().toISOString().split('T')[0],
+                    contactName: contact,
+                    contactEmail: email,
+                    stats: { '2025-07': { questions: 0, apiCalls: 0 }, '2025-06': { questions: 0, apiCalls: 0 }, '2025-05': { questions: 0, apiCalls: 0 } }
+                };
+                clientData.push(newClient);
+                alert(`企業「${name}」を登録しました。\n担当者「${email}」宛に登録案内メールを送信しました。（シミュレーション）`);
+                
+                document.getElementById('new-client-name').value = '';
+                document.getElementById('new-client-contact').value = '';
+                document.getElementById('new-client-email').value = '';
+
+                renderClientTable();
+                switchView('clients');
+            } else {
+                alert('すべての項目を入力してください。');
+            }
+        }
+
+        function downloadCSV() {
+            const selectedMonth = document.getElementById('month-filter').value;
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "企業ID,会社名,登録日,質問数,APIリクエスト数\n";
+
+            clientData.forEach(client => {
+                const stats = client.stats[selectedMonth] || { questions: 0, apiCalls: 0 };
+                const row = [client.id, client.name, client.regDate, stats.questions, stats.apiCalls].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `q-set_report_${selectedMonth}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function renderAdminList() {
+            const adminList = document.getElementById('admin-list');
+            adminList.innerHTML = '';
+            adminUsers.forEach(user => {
+                const roleColor = user.role === 'マスター管理者' ? 'bg-red-100 text-red-700' : user.role === '管理者' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700';
+                const item = `
+                    <li class="flex items-center justify-between bg-slate-50 p-3 rounded-md">
+                        <div>
+                            <p class="font-medium">${user.email}</p>
+                        </div>
+                        <span class="${roleColor} text-xs font-semibold px-2.5 py-0.5 rounded-full">${user.role}</span>
+                    </li>
+                `;
+                adminList.innerHTML += item;
+            });
+        }
+
+        function handleAddAdmin() {
+            const email = document.getElementById('new-admin-email').value;
+            const password = document.getElementById('new-admin-password').value;
+            const role = document.getElementById('new-admin-role').value;
+
+            if (email && password && role) {
+                adminUsers.push({ email, role });
+                renderAdminList();
+                alert(`管理者「${email}」を追加しました。招待メールと初期パスワードを送信しました。（シミュレーション）`);
+                document.getElementById('new-admin-email').value = '';
+                document.getElementById('new-admin-password').value = '';
+            } else {
+                alert('すべての項目を入力してください。');
+            }
+        }
+        
+        function toggleDashboardView(viewType) {
+            const monthlyBtn = document.getElementById('monthly-btn');
+            const cumulativeBtn = document.getElementById('cumulative-btn');
+            const questionsTitle = document.getElementById('questions-title');
+            const apiCallsTitle = document.getElementById('apicalls-title');
+            
+            let totalQuestions, totalApiCalls;
+
+            if (viewType === 'monthly') {
+                monthlyBtn.classList.add('bg-white', 'text-teal-700', 'shadow');
+                cumulativeBtn.classList.remove('bg-white', 'text-teal-700', 'shadow');
+                cumulativeBtn.classList.add('text-slate-600');
+                
+                const currentMonth = document.getElementById('month-filter').value;
+                questionsTitle.textContent = '総質問数 (今月)';
+                apiCallsTitle.textContent = '総APIリクエスト (今月)';
+                totalQuestions = clientData.reduce((sum, client) => sum + (client.stats[currentMonth]?.questions || 0), 0);
+                totalApiCalls = clientData.reduce((sum, client) => sum + (client.stats[currentMonth]?.apiCalls || 0), 0);
+            } else {
+                cumulativeBtn.classList.add('bg-white', 'text-teal-700', 'shadow');
+                monthlyBtn.classList.remove('bg-white', 'text-teal-700', 'shadow');
+                monthlyBtn.classList.add('text-slate-600');
+                
+                questionsTitle.textContent = '累計質問数';
+                apiCallsTitle.textContent = '累計APIリクエスト';
+                totalQuestions = clientData.reduce((sum, client) => sum + Object.values(client.stats).reduce((s, m) => s + m.questions, 0), 0);
+                totalApiCalls = clientData.reduce((sum, client) => sum + Object.values(client.stats).reduce((s, m) => s + m.apiCalls, 0), 0);
+            }
+            document.getElementById('total-questions').textContent = totalQuestions.toLocaleString();
+            document.getElementById('total-api-calls').textContent = totalApiCalls.toLocaleString();
+        }
+
+        function initApp() {
+            generateClientIds();
+            switchView('dashboard');
+            renderClientTable();
+            renderAdminList();
+
+            document.getElementById('total-clients').textContent = clientData.length;
+            toggleDashboardView('monthly');
+
+            const chartCtx = document.getElementById('mainTrendChart').getContext('2d');
+            const labels = ['2025-05', '2025-06', '2025-07'];
+            const chartData = labels.map(label => 
+                clientData.reduce((sum, client) => sum + (client.stats[label]?.questions || 0), 0)
+            );
+            new Chart(chartCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels.map(l => `${l.split('-')[1]}月`),
+                    datasets: [{
+                        label: '総質問数',
+                        data: chartData,
+                        backgroundColor: 'rgba(1, 161, 127, 0.5)',
+                        borderColor: '#01a17f',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
