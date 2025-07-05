@@ -11,10 +11,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     
     <!-- Chosen Palette: Teal (based on #01a17f) -->
-    <!-- Application Structure Plan: アプリケーションは、企業ユーザー向けの管理ダッシュボードと、求職者向けのチャットUIデモの2つの主要なビューで構成されています。管理ダッシュボードは左側のサイドバーナビゲーションで「ダッシュボード」「会社情報」「設定」「会話データ」「分析レポート」の各機能画面を切り替えるSPA形式を採用。この構造は、企業ユーザーが必要な機能に迷わずアクセスでき、シームレスな操作体験を提供するために選択されました。各画面はカードベースのレイアウトで情報を整理し、視覚的な分かりやすさを重視しています。 -->
+    <!-- Application Structure Plan: アプリケーションは、企業ユーザー向けの管理ダッシュボードと、求職者向けのチャットUIデモの2つの主要なビューで構成されています。管理ダッシュボードは左側のサイドバーナビゲーションで「ダッシュボード」「会社情報」「使用方法」「設定」「会話データ」「分析レポート」の各機能画面を切り替えるSPA形式を採用。この構造は、企業ユーザーが必要な機能に迷わずアクセスでき、シームレスな操作体験を提供するために選択されました。各画面はカードベースのレイアウトで情報を整理し、視覚的な分かりやすさを重視しています。 -->
     <!-- Visualization & Content Choices: 
         - Report Info: 各機能へのナビゲーション -> Goal: Navigate -> Viz/Presentation: サイドバーメニュー -> Interaction: クリックで右側のメインコンテンツが動的に切り替わる。
         - Report Info: 会社情報 -> Goal: Inform/Configure -> Viz/Presentation: フォーム形式のカード -> Interaction: 各情報の確認・編集が可能（UI上）。
+        - Report Info: 使用方法 -> Goal: Guide -> Viz/Presentation: ステップ形式のカード -> Interaction: なし。ユーザーがサービスの利用フローを理解するのを助ける。
         - Report Info: チャットボット設定 -> Goal: Configure -> Viz/Presentation: フォームとファイルアップロードUI -> Interaction: フォーム入力、トグルスイッチのON/OFF、ファイルのドラッグ＆ドロップが可能。初回メッセージや面談URLの設定も可能。
         - Report Info: 会話データ -> Goal: Explore Data -> Viz/Presentation: フィルタリング機能付きのテーブル -> Interaction: 検索ボックスやドロップダウンで表示される会話ログを動的に絞り込める。
         - Report Info: 分析レポート -> Goal: Analyze -> Viz/Presentation: Chart.jsによる棒グラフとドーナツグラフ、AIによるテキストサマリー -> Interaction: グラフのホバーで詳細ツールチップ表示。期間セレクターで表示データを変更できる。
@@ -65,6 +66,9 @@
                 </a>
                 <a href="#" onclick="switchView('company')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
                     <span class="mr-3 text-lg">🏢</span> 会社情報
+                </a>
+                <a href="#" onclick="switchView('usage')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
+                    <span class="mr-3 text-lg">❓</span> 使用方法
                 </a>
                 <a href="#" onclick="switchView('settings')" class="sidebar-link flex items-center px-4 py-2 text-slate-700 rounded-lg">
                     <span class="mr-3 text-lg">⚙️</span> チャットボット設定
@@ -170,6 +174,28 @@
                 </div>
             </div>
 
+            <div id="view-usage" class="main-view p-6 md:p-8 hidden">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">使用方法</h2>
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-xl font-bold mb-2 flex items-center"><span class="main-theme-color text-2xl mr-3">1</span> 会社情報の設定</h3>
+                        <p class="text-slate-600 pl-8">まずはじめに、「会社情報」ページで貴社の基本情報を登録してください。ここで登録された情報は、チャットボットが会社を代表して回答する際に利用されることがあります。</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-xl font-bold mb-2 flex items-center"><span class="main-theme-color text-2xl mr-3">2</span> チャットボットの設定</h3>
+                        <p class="text-slate-600 pl-8">次に「チャットボット設定」ページで、AIに学習させる資料をアップロードし、回答の雰囲気や初回メッセージなどを設定します。設定が完了したら、必ず「設定を更新」ボタンを押してください。</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-xl font-bold mb-2 flex items-center"><span class="main-theme-color text-2xl mr-3">3</span> URLの取得と共有</h3>
+                        <p class="text-slate-600 pl-8">「ダッシュボード」に表示されているチャットボットURLをコピーし、貴社の採用サイトや求人情報ページに貼り付けてください。これで求職者がチャットボットを利用できるようになります。</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow border">
+                        <h3 class="text-xl font-bold mb-2 flex items-center"><span class="main-theme-color text-2xl mr-3">4</span> データの分析と改善</h3>
+                        <p class="text-slate-600 pl-8">定期的に「会話データ」や「分析レポート」を確認し、求職者が何に関心を持っているかを把握しましょう。AIによる改善提案を参考に、採用活動の質を高めていくことができます。</p>
+                    </div>
+                </div>
+            </div>
+
             <div id="view-settings" class="main-view p-6 md:p-8 hidden">
                 <h2 class="text-3xl font-bold text-slate-900 mb-6">チャットボット設定</h2>
                 <div class="max-w-4xl mx-auto space-y-8">
@@ -257,12 +283,13 @@
                 <h2 class="text-3xl font-bold text-slate-900 mb-6">会話データ</h2>
                 <div class="bg-white p-6 rounded-xl shadow border">
                     <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                        <input type="text" placeholder="キーワードで検索..." class="w-full md:w-1/3 p-2 border border-slate-300 rounded-lg">
-                        <select class="p-2 border border-slate-300 rounded-lg">
+                        <input id="data-search-input" onkeyup="filterConversationData()" type="text" placeholder="キーワードで検索..." class="w-full md:w-1/3 p-2 border border-slate-300 rounded-lg">
+                        <select id="data-topic-select" onchange="filterConversationData()" class="p-2 border border-slate-300 rounded-lg">
                             <option>すべてのトピック</option>
                             <option>福利厚生</option>
                             <option>給与・待遇</option>
                             <option>業務内容</option>
+                            <option>社風・文化</option>
                         </select>
                     </div>
                     <div class="overflow-x-auto">
@@ -274,7 +301,7 @@
                                     <th class="p-3">トピック</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="data-table-body">
                                 <tr class="border-b">
                                     <td class="p-3 text-sm text-slate-500">2025/07/06 10:32</td>
                                     <td class="p-3">住宅手当はありますか？</td>
@@ -289,6 +316,16 @@
                                     <td class="p-3 text-sm text-slate-500">2025/07/05 18:45</td>
                                     <td class="p-3">リモートワークは可能ですか？</td>
                                     <td class="p-3"><span class="bg-violet-100 text-violet-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">福利厚生</span></td>
+                                </tr>
+                                <tr class="border-b">
+                                    <td class="p-3 text-sm text-slate-500">2025/07/05 14:20</td>
+                                    <td class="p-3">開発チームの雰囲気を教えてください。</td>
+                                    <td class="p-3"><span class="bg-pink-100 text-pink-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">社風・文化</span></td>
+                                </tr>
+                                <tr class="border-b">
+                                    <td class="p-3 text-sm text-slate-500">2025/07/04 11:55</td>
+                                    <td class="p-3">どのような技術スタックを使っていますか？</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">業務内容</span></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -575,6 +612,31 @@
                     }, 3000);
                 }, 1500);
             }, 2500);
+        }
+
+        function filterConversationData() {
+            const searchInput = document.getElementById('data-search-input').value.toLowerCase();
+            const topicSelect = document.getElementById('data-topic-select').value;
+            const tableBody = document.getElementById('data-table-body');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const questionCell = rows[i].getElementsByTagName('td')[1];
+                const topicCell = rows[i].getElementsByTagName('td')[2];
+                if (questionCell && topicCell) {
+                    const questionText = questionCell.textContent || questionCell.innerText;
+                    const topicText = topicCell.textContent || topicCell.innerText;
+                    
+                    const keywordMatch = questionText.toLowerCase().indexOf(searchInput) > -1;
+                    const topicMatch = topicSelect === 'すべてのトピック' || topicText.includes(topicSelect);
+
+                    if (keywordMatch && topicMatch) {
+                        rows[i].style.display = "";
+                    } else {
+                        rows[i].style.display = "none";
+                    }
+                }
+            }
         }
 
         meetingUrlToggle.addEventListener('change', (event) => {
