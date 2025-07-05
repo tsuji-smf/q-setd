@@ -6,6 +6,7 @@
     <title>Q-set | 採用支援AIチャットボット</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -15,10 +16,10 @@
     <!-- Visualization & Content Choices: 
         - Report Info: 各機能へのナビゲーション -> Goal: Navigate -> Viz/Presentation: サイドバーメニュー -> Interaction: クリックで右側のメインコンテンツが動的に切り替わる。
         - Report Info: 会社情報 -> Goal: Inform/Configure -> Viz/Presentation: フォーム形式のカード -> Interaction: 各情報の確認・編集が可能（UI上）。
-        - Report Info: 使用方法 -> Goal: Guide -> Viz/Presentation: ステップ形式のカード -> Interaction: なし。ユーザーがサービスの利用フローを理解するのを助ける。
+        - Report Info: 使用方法 -> Goal: Guide -> Viz/Presentation: ステップ形式のカードとアイコン、UIを模した視覚要素 -> Interaction: なし。ユーザーがサービスの利用フローを視覚的に理解するのを助ける。
         - Report Info: チャットボット設定 -> Goal: Configure -> Viz/Presentation: フォームとファイルアップロードUI -> Interaction: フォーム入力、トグルスイッチのON/OFF、ファイルのドラッグ＆ドロップが可能。初回メッセージや面談URLの設定も可能。
         - Report Info: 会話データ -> Goal: Explore Data -> Viz/Presentation: フィルタリング機能付きのテーブル -> Interaction: 検索ボックスやドロップダウンで表示される会話ログを動的に絞り込める。
-        - Report Info: 分析レポート -> Goal: Analyze -> Viz/Presentation: Chart.jsによる棒グラフとドーナツグラフ、AIによるテキストサマリー -> Interaction: グラフのホバーで詳細ツールチップ表示。期間セレクターで表示データを変更できる。
+        - Report Info: 分析レポート -> Goal: Analyze -> Viz/Presentation: Chart.jsによる棒グラフとドーナツグラフ（データラベル付き）、AIによるテキストサマリー -> Interaction: グラフのホバーで詳細ツールチップ表示。期間セレクターで表示データを変更できる。
         - Report Info: 求職者チャット -> Goal: Demonstrate -> Viz/Presentation: 実際のチャットUI -> Interaction: 設定した初回メッセージ（面談ボタン含む）が表示され、自動応答がシミュレートされる。
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
@@ -31,7 +32,7 @@
         .chart-container {
             position: relative;
             width: 100%;
-            height: 250px; /* Reduced height */
+            height: 250px;
             max-height: 250px;
         }
         .sidebar-link.active {
@@ -169,29 +170,53 @@
                         </div>
                     </div>
                     <div class="mt-8 text-right">
-                        <button class="main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-6 rounded-lg">保存</button>
+                        <button class="main-theme-bg main-theme-bg-hover text-white font-bold py-2 px-6 rounded-lg">更新</button>
                     </div>
                 </div>
             </div>
 
             <div id="view-usage" class="main-view p-6 md:p-8 hidden">
-                <h2 class="text-3xl font-bold text-slate-900 mb-6">使用方法</h2>
-                <div class="max-w-4xl mx-auto space-y-6">
-                    <div class="bg-white p-6 rounded-xl shadow border">
-                        <h3 class="text-xl font-bold mb-2 flex items-center"><span class="main-theme-color text-2xl mr-3">1</span> 会社情報の設定</h3>
-                        <p class="text-slate-600 pl-8">まずはじめに、「会社情報」ページで貴社の基本情報を登録してください。ここで登録された情報は、チャットボットが会社を代表して回答する際に利用されることがあります。</p>
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">使用方法ガイド</h2>
+                <div class="max-w-4xl mx-auto space-y-10">
+                    <div class="flex items-start gap-6">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full main-theme-bg text-white flex items-center justify-center text-xl font-bold shadow">1</div>
+                        <div class="flex-1 pt-2">
+                            <h3 class="text-xl font-bold mb-2">会社情報の設定</h3>
+                            <p class="text-slate-600">まず「<span class="font-bold text-teal-700">会社情報</span>」ページで貴社の基本情報を登録します。この情報はチャットボットが会社を代表して回答する際に利用されることがあります。</p>
+                        </div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow border">
-                        <h3 class="text-xl font-bold mb-2 flex items-center"><span class="main-theme-color text-2xl mr-3">2</span> チャットボットの設定</h3>
-                        <p class="text-slate-600 pl-8">次に「チャットボット設定」ページで、AIに学習させる資料をアップロードし、回答の雰囲気や初回メッセージなどを設定します。設定が完了したら、必ず「設定を更新」ボタンを押してください。</p>
+                     <div class="pl-12"><div class="h-10 border-l-2 border-dashed border-slate-300 w-px ml-5"></div></div>
+                    <div class="flex items-start gap-6">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full main-theme-bg text-white flex items-center justify-center text-xl font-bold shadow">2</div>
+                        <div class="flex-1 pt-2">
+                            <h3 class="text-xl font-bold mb-2">チャットボットの設定</h3>
+                            <p class="text-slate-600 mb-4">次に「<span class="font-bold text-teal-700">チャットボット設定</span>」でAIをカスタマイズします。最後に必ず「<span class="font-bold text-teal-700">設定を更新</span>」ボタンを押してください。</p>
+                            <div class="bg-white p-4 rounded-lg border shadow-sm space-y-3">
+                                <p class="flex items-center"><span class="text-lg mr-2">📄</span> <strong>学習データ:</strong> 採用資料などをアップロードします。</p>
+                                <p class="flex items-center"><span class="text-lg mr-2">🎨</span> <strong>基本設定:</strong> 回答の雰囲気やおすすめ質問を設定します。</p>
+                                <p class="flex items-center"><span class="text-lg mr-2">👋</span> <strong>初回メッセージ設定:</strong> 候補者への最初の挨拶や面談案内を設定します。</p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow border">
-                        <h3 class="text-xl font-bold mb-2 flex items-center"><span class="main-theme-color text-2xl mr-3">3</span> URLの取得と共有</h3>
-                        <p class="text-slate-600 pl-8">「ダッシュボード」に表示されているチャットボットURLをコピーし、貴社の採用サイトや求人情報ページに貼り付けてください。これで求職者がチャットボットを利用できるようになります。</p>
+                    <div class="pl-12"><div class="h-10 border-l-2 border-dashed border-slate-300 w-px ml-5"></div></div>
+                    <div class="flex items-start gap-6">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full main-theme-bg text-white flex items-center justify-center text-xl font-bold shadow">3</div>
+                        <div class="flex-1 pt-2">
+                            <h3 class="text-xl font-bold mb-2">URLの取得と共有</h3>
+                            <p class="text-slate-600 mb-4">「<span class="font-bold text-teal-700">ダッシュボード</span>」に表示されているURLをコピーし、貴社の採用サイトや求人情報ページに設置します。</p>
+                            <div class="bg-white p-3 rounded-lg border shadow-sm flex items-center gap-2">
+                                <span class="text-slate-500 text-sm flex-grow bg-slate-100 p-2 rounded-md font-mono">https://...</span>
+                                <button class="main-theme-bg text-white font-bold py-2 px-4 rounded-lg text-sm">コピー</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow border">
-                        <h3 class="text-xl font-bold mb-2 flex items-center"><span class="main-theme-color text-2xl mr-3">4</span> データの分析と改善</h3>
-                        <p class="text-slate-600 pl-8">定期的に「会話データ」や「分析レポート」を確認し、求職者が何に関心を持っているかを把握しましょう。AIによる改善提案を参考に、採用活動の質を高めていくことができます。</p>
+                     <div class="pl-12"><div class="h-10 border-l-2 border-dashed border-slate-300 w-px ml-5"></div></div>
+                    <div class="flex items-start gap-6">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full main-theme-bg text-white flex items-center justify-center text-xl font-bold shadow">4</div>
+                        <div class="flex-1 pt-2">
+                            <h3 class="text-xl font-bold mb-2">データの分析と改善</h3>
+                            <p class="text-slate-600">定期的に「<span class="font-bold text-teal-700">分析レポート</span>」を確認し、求職者の関心事を把握しましょう。AIの改善提案を参考に、採用活動の質を高めていくことができます。</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -338,6 +363,7 @@
                     <h2 class="text-3xl font-bold text-slate-900">分析レポート</h2>
                     <div class="flex items-center gap-2">
                         <select class="p-2 border border-slate-300 rounded-lg bg-white">
+                            <option>全期間</option>
                             <option>2025年7月</option>
                             <option>2025年6月</option>
                             <option>2025年5月</option>
@@ -409,6 +435,8 @@
         let dashboardChartInstance = null;
         const meetingUrlToggle = document.getElementById('meeting-url-toggle');
         const meetingUrlContainer = document.getElementById('meeting-url-container');
+        
+        Chart.register(ChartDataLabels);
 
         function switchView(viewId) {
             views.forEach(view => {
@@ -436,17 +464,40 @@
         function renderTopicChart() {
             if (topicChartInstance) topicChartInstance.destroy();
             const ctx = document.getElementById('topicChart').getContext('2d');
+            const data = [32, 21, 18, 15, 9, 5];
             topicChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['福利厚生', '給与・待遇', '業務内容', '社風・文化', '選考プロセス', 'その他'],
                     datasets: [{
-                        data: [32, 21, 18, 15, 9, 5],
+                        data: data,
                         backgroundColor: ['#8b5cf6', '#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#6b7280'],
                         borderWidth: 0,
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { position: 'right' },
+                        datalabels: {
+                            formatter: (value, ctx) => {
+                                let sum = 0;
+                                let dataArr = ctx.chart.data.datasets[0].data;
+                                dataArr.map(data => {
+                                    sum += data;
+                                });
+                                let percentage = (value*100 / sum).toFixed(1) + "%";
+                                return percentage;
+                            },
+                            color: '#fff',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            }
+                        }
+                    } 
+                }
             });
         }
         
