@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Q-set | 管理者インターフェイス</title>
+    <title>ミミル | 管理者インターフェイス</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -60,7 +60,7 @@
     <div id="login-view" class="min-h-screen flex flex-col items-center justify-center bg-teal-50 px-4">
         <div class="w-full max-w-md">
             <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold main-theme-color">キューセット</h1>
+                <h1 class="text-3xl font-bold main-theme-color">ミミル</h1>
                 <p class="text-slate-600 mt-2">管理者インターフェイス</p>
             </div>
             <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
@@ -94,7 +94,7 @@
         <div class="flex h-screen bg-slate-100">
             <aside class="w-64 bg-white border-r border-slate-200 flex-shrink-0 hidden md:flex flex-col">
                 <div class="h-16 flex items-center justify-center border-b border-slate-200 px-4">
-                    <h1 class="text-2xl font-bold main-theme-color">キューセット</h1>
+                    <h1 class="text-2xl font-bold main-theme-color">ミミル</h1>
                 </div>
                 <nav class="flex-1 p-4 space-y-2">
                     <a href="#" onclick="switchView('dashboard')" class="sidebar-link active flex items-center px-4 py-2 text-slate-700 rounded-lg">
@@ -186,9 +186,12 @@
 
                 <div id="view-client-detail" class="main-view p-6 md:p-8 hidden">
                     <button onclick="switchView('clients')" class="mb-6 text-teal-600 hover:underline">&larr; 顧客管理に戻る</button>
-                    <h2 id="detail-client-name" class="text-3xl font-bold text-slate-900 mb-2"></h2>
-                    <p id="detail-client-id" class="text-sm text-slate-500 mb-6 font-mono"></p>
+                    <h2 id="detail-client-name" class="text-3xl font-bold text-slate-900 mb-6"></h2>
                     <div class="space-y-8">
+                        <div class="bg-white p-6 rounded-xl shadow border">
+                            <h3 class="text-xl font-bold mb-4">登録情報</h3>
+                            <div id="detail-client-info" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm"></div>
+                        </div>
                         <div class="bg-white p-6 rounded-xl shadow border">
                             <h3 class="text-xl font-bold mb-4">利用状況サマリー</h3>
                             <div id="detail-client-stats" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
@@ -276,11 +279,11 @@
                 <h3 class="font-bold text-lg mb-4">送信内容の確認</h3>
                 <div class="bg-slate-50 p-4 rounded-lg border text-sm space-y-2">
                     <p><strong>宛先:</strong> <span id="confirm-email"></span></p>
-                    <p><strong>件名:</strong> キューセットへようこそ！本登録のご案内</p>
+                    <p><strong>件名:</strong> ミミルへようこそ！本登録のご案内</p>
                     <div class="border-t pt-2 mt-2">
                         <p id="confirm-company-name"></p>
                         <p id="confirm-contact-name" class="mb-2"></p>
-                        <p>この度はキューセットにお申し込みいただき、誠にありがとうございます。</p>
+                        <p>この度はミミルにお申し込みいただき、誠にありがとうございます。</p>
                         <p>以下のURLからパスワードを設定し、本登録を完了してください。</p>
                         <p class="mt-2"><a href="#" id="confirm-reg-url" class="text-teal-600 break-all"></a></p>
                     </div>
@@ -404,10 +407,16 @@
             if (!client) return;
 
             document.getElementById('detail-client-name').textContent = client.name;
-            document.getElementById('detail-client-id').textContent = client.id;
+            const infoContainer = document.getElementById('detail-client-info');
+            infoContainer.innerHTML = `
+                <div><p class="text-xs text-slate-500">企業ID</p><p class="font-medium font-mono">${client.id}</p></div>
+                <div><p class="text-xs text-slate-500">担当者名</p><p class="font-medium">${client.contactName}</p></div>
+                <div><p class="text-xs text-slate-500">登録日</p><p class="font-medium">${client.regDate}</p></div>
+                <div><p class="text-xs text-slate-500">連絡先メールアドレス</p><p class="font-medium">${client.contactEmail}</p></div>
+            `;
+            
             const statsContainer = document.getElementById('detail-client-stats');
             statsContainer.innerHTML = '';
-
             Object.keys(client.stats).sort().reverse().forEach(month => {
                 const monthStats = client.stats[month];
                 const card = `
@@ -440,7 +449,7 @@
                 document.getElementById('confirm-email').textContent = email;
                 document.getElementById('confirm-company-name').textContent = `${name}`;
                 document.getElementById('confirm-contact-name').textContent = `${contact} 様`;
-                const registrationUrl = `https://q-set.ai/register?token=${Math.random().toString(36).substr(2)}`;
+                const registrationUrl = `https://mimiru.ai/register?token=${Math.random().toString(36).substr(2)}`;
                 document.getElementById('confirm-reg-url').textContent = registrationUrl;
                 document.getElementById('confirm-reg-url').href = '#';
                 document.getElementById('email-confirm-modal').classList.add('active');
@@ -491,7 +500,7 @@
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `q-set_report_${selectedMonth}.csv`);
+            link.setAttribute("download", `mimiru_report_${selectedMonth}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
