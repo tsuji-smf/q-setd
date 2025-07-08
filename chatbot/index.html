@@ -52,7 +52,7 @@
             initialMessage: "こんにちは！採用に関するご質問があれば、何でも聞いてくださいね。",
             recommendedQuestions: ["福利厚生について", "平均残業時間は？", "社内の雰囲気は？"],
             fallbackMessage: "そのご質問については、現在学習中のため正確にお答えできません。お手数ですが、採用担当者まで直接お問い合わせいただけますでしょうか。",
-            meetingURL: "https://calendly.com/your-company",
+            meetingURL: "https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ3x7IreR53zn9vfXp--r4IO95ySj5iVmXOy2BIjIq22P6ork1iAblpM15AzImQSoFBoHEC6NJSX",
             meetingBtnText: "カジュアル面談を予約"
         };
 
@@ -95,6 +95,12 @@
                         botResponseText += "当社の福利厚生には、住宅手当、資格取得支援、リモートワーク制度などがございます。詳細は採用資料のP.12をご確認ください。";
                     } else if (userMessage.includes("給与") || userMessage.includes("年収")) {
                         botResponseText += "給与については、ご経験やスキルに応じて決定されます。モデル年収については、採用サイトの募集要項に記載がございます。";
+                    } else if (userMessage.includes("有給")) {
+                        botResponseText += "有給休暇は入社半年後に10日付与されます。年間の平均取得日数は12日です。";
+                    } else if (userMessage.includes("残業時間")) {
+                        botResponseText += "平均残業時間は月20時間程度です。繁忙期には変動することがあります。";
+                    } else if (userMessage.includes("社内の雰囲気")) {
+                        botResponseText += "20代から30代の若手が多く、フラットで風通しの良い雰囲気です。部活動や社内イベントも活発に行われています。";
                     } else {
                         botResponseText = settings.fallbackMessage;
                     }
