@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ミミル 採用支援BOT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        .main-theme-bg { background-color: #01a17f; }
+        .main-theme-bg-hover:hover { background-color: #018a6b; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-slate-100">
+
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[95vh] flex flex-col">
+        <header class="p-4 border-b flex justify-between items-center flex-shrink-0">
+            <h3 id="chat-header-title" class="font-bold text-lg">株式会社ミミル 採用支援BOT</h3>
+            <button onclick="window.close()" class="text-slate-500 hover:text-slate-800 text-2xl" title="閉じる">&times;</button>
+        </header>
+        <div class="p-3 border-b bg-amber-50 text-amber-800 text-xs">
+            <p><strong>ご注意:</strong> このチャットの回答はAIによって生成されており、必ずしも正確ではない場合があります。ご不明な点や不安に思うことは、採用担当者へ直接ご確認ください。</p>
+        </div>
+        <div id="chat-messages" class="flex-1 p-6 overflow-y-auto space-y-4">
+        </div>
+        <footer class="p-4 border-t flex-shrink-0 bg-white">
+            <div id="recommended-questions-container" class="flex flex-wrap gap-2 mb-3">
+            </div>
+            <div class="flex items-center space-x-2">
+                <input id="chat-input" type="text" placeholder="質問を入力してください..." class="flex-1 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                <button id="chat-send" class="main-theme-bg main-theme-bg-hover text-white font-bold py-3 px-5 rounded-lg">送信</button>
+            </div>
+            <div id="meeting-container" class="mt-3 text-center">
+                <button id="meeting-btn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-1 px-3 rounded-full text-xs transition-colors">カジュアル面談を予約</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendButton = document.getElementById('chat-send');
+        
+        const settings = {
+            companyName: "株式会社ミミル",
+            initialMessage: "こんにちは！採用に関するご質問があれば、何でも聞いてくださいね。",
+            recommendedQuestions: ["福利厚生について", "平均残業時間は？", "社内の雰囲気は？"],
+            fallbackMessage: "そのご質問については、現在学習中のため正確にお答えできません。お手数ですが、採用担当者まで直接お問い合わせいただけますでしょうか。",
+            meetingURL: "https://calendly.com/your-company",
+            meetingBtnText: "カジュアル面談を予約"
+        };
+
+        function addMessage(content, sender, isHtml = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const messageBubble = document.createElement('div');
+            if (isHtml) {
+                messageBubble.innerHTML = content;
+            } else {
+                messageBubble.textContent = content;
+            }
+            messageBubble.className = `max-w-md px-4 py-3 rounded-2xl ${sender === 'user' ? 'main-theme-bg text-white' : 'bg-slate-100 text-slate-800'}`;
+            
+            messageDiv.appendChild(messageBubble);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addBotMessage(content, isHtml = false) {
+            addMessage(content, 'bot', isHtml);
+        }
+
+        function handleSendMessage() {
+            const recommendedContainer = document.getElementById('recommended-questions-container');
+            if(recommendedContainer) {
+                recommendedContainer.innerHTML = '';
+                recommendedContainer.classList.add('hidden');
+            }
+
+            const userMessage = chatInput.value.trim();
+            if (userMessage) {
+                addMessage(userMessage, 'user');
+                chatInput.value = '';
+                
+                setTimeout(() => {
+                    let botResponseText = "ご質問ありがとうございます。";
+                    if (userMessage.includes("福利厚生")) {
+                        botResponseText += "当社の福利厚生には、住宅手当、資格取得支援、リモートワーク制度などがございます。詳細は採用資料のP.12をご確認ください。";
+                    } else if (userMessage.includes("給与") || userMessage.includes("年収")) {
+                        botResponseText += "給与については、ご経験やスキルに応じて決定されます。モデル年収については、採用サイトの募集要項に記載がございます。";
+                    } else {
+                        botResponseText = settings.fallbackMessage;
+                    }
+                    addBotMessage(botResponseText);
+                }, 1000);
+            }
+        }
+        
+        function initializeChat() {
+            document.getElementById('chat-header-title').textContent = `${settings.companyName} 採用支援BOT`;
+            document.getElementById('meeting-btn').textContent = settings.meetingBtnText;
+            document.getElementById('meeting-btn').onclick = () => window.open(settings.meetingURL, '_blank');
+
+            addBotMessage(`<p>${settings.initialMessage.replace(/\n/g, '<br>')}</p>`, true);
+
+            const recommendedContainer = document.getElementById('recommended-questions-container');
+            recommendedContainer.innerHTML = '';
+            const questions = settings.recommendedQuestions;
+            if (questions.length > 0) {
+                questions.forEach(q => {
+                    const btn = document.createElement('button');
+                    btn.textContent = q;
+                    btn.className = 'bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1 rounded-full hover:bg-teal-200 transition-colors';
+                    btn.onclick = () => {
+                        chatInput.value = q;
+                        handleSendMessage();
+                    };
+                    recommendedContainer.appendChild(btn);
+                });
+                recommendedContainer.classList.remove('hidden');
+            } else {
+                recommendedContainer.classList.add('hidden');
+            }
+        }
+
+        chatSendButton.addEventListener('click', handleSendMessage);
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleSendMessage();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', initializeChat);
+    </script>
+</body>
+</html>
